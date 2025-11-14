@@ -391,8 +391,8 @@ wss.on('connection', (ws, req) => {
               axiosConfig.data = body
             }
             
-            // Handle binary responses (e.g., audio files)
-            if (endpoint.includes('/synthesis') || endpoint.includes('/audio')) {
+            // Handle binary responses (only /synthesis returns WAV binary)
+            if (endpoint.includes('/synthesis')) {
               axiosConfig.responseType = 'arraybuffer'
             }
             
