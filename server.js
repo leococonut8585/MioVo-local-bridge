@@ -355,6 +355,75 @@ wss.on('connection', (ws, req) => {
           }
           break
           
+        case 'voicevox_request':
+          try {
+            const { endpoint, method = 'GET', body, params } = request.data.payload || {}
+            
+            if (!endpoint) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                error: 'エンドポイントが指定されていません',
+                requestId: request.requestId
+              }))
+              break
+            }
+            
+            const url = `${VOICEVOX_URL}${endpoint}`
+            console.log(`🔗 VOICEVOX Request: ${method} ${url}`)
+            
+            // Prepare axios config
+            const axiosConfig = {
+              method: method.toUpperCase(),
+              url,
+              timeout: 30000
+            }
+            
+            // Add query parameters if provided
+            if (params) {
+              axiosConfig.params = params
+            }
+            
+            // Add request body if provided (for POST/PUT)
+            if (body && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
+              axiosConfig.data = body
+            }
+            
+            // Handle binary responses (e.g., audio files)
+            if (endpoint.includes('/synthesis') || endpoint.includes('/audio')) {
+              axiosConfig.responseType = 'arraybuffer'
+            }
+            
+            // Make the request
+            const response = await axios(axiosConfig)
+            
+            // Prepare response data
+            let responseData = response.data
+            
+            // Convert binary data to base64 if needed
+            if (response.data instanceof ArrayBuffer || Buffer.isBuffer(response.data)) {
+              const audioBase64 = Buffer.from(response.data).toString('base64')
+              responseData = {
+                audio: `data:audio/wav;base64,${audioBase64}`,
+                contentType: response.headers['content-type'] || 'audio/wav'
+              }
+            }
+            
+            ws.send(JSON.stringify({
+              type: 'voicevox_request-response',
+              data: responseData,
+              requestId: request.requestId
+            }))
+          } catch (error) {
+            console.error('VOICEVOX request error:', error.message)
+            ws.send(JSON.stringify({
+              type: 'error',
+              error: `VOICEVOX APIエラー: ${error.response?.statusText || error.message}`,
+              details: error.response?.data,
+              requestId: request.requestId
+            }))
+          }
+          break
+          
         default:
           ws.send(JSON.stringify({
             type: 'error',
