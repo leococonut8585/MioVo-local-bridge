@@ -370,6 +370,9 @@ wss.on('connection', (ws, req) => {
             
             const url = `${VOICEVOX_URL}${endpoint}`
             console.log(`🔗 VOICEVOX Request: ${method} ${url}`)
+            if (body) {
+              console.log(`📦 Request body type: ${typeof body}, keys: ${Object.keys(body).slice(0, 5).join(', ')}`)
+            }
             
             // Prepare axios config
             const axiosConfig = {
